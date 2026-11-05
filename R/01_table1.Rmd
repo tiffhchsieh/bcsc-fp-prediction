@@ -1,0 +1,137 @@
+---
+title: "table1 updated - 012026"
+author: "Tiffany Hsieh"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+
+```{r}
+library(gtsummary)
+library(dplyr)
+library(flextable)
+library(gt)
+```
+
+
+
+```{r}
+
+source("config.R")  # knitr runs from R/
+load(file.path(data_dir, "AB468b_data_noPHI_shared_randomForests.RData"))
+
+# Data preparation
+vars <- c(
+  "age_deid","racenci_new","menopht_2cat","famhx_c","bmi_c","mammtype_new",
+  "density_c","prvmos_c","mossince1stdx","mossinceprvsurvmm_cat",
+  "mod1_new","dxage_deid","dxyear","hist1_new","stage1","grade1_c",
+  "erplus1","srg1_new","rt_new","adjthrpy_1"
+)
+
+catVars <- c(
+  "racenci_new","menopht_2cat","famhx_c","mammtype_new","density_c",
+  "mossinceprvsurvmm_cat","mod1_new","hist1_new","stage1","grade1_c",
+  "erplus1","srg1_new","rt_new","adjthrpy_1"
+)
+
+# Create filtered datasets
+df_recall <- filter(data_exam_analytic_deid, FP_recall == 1) #updated to FPrecall and not FP recall only
+df_biop        <- filter(data_exam_analytic_deid, FP_biop == 1)    
+df_none        <- filter(data_exam_analytic_deid, FP_recall == 0, FP_biop == 0)
+df_all         <- data_exam_analytic_deid
+```
+
+```{r}
+# Create individual summary tables
+tbl_recall <- df_recall %>%
+  select(all_of(vars)) %>%
+  tbl_summary(
+    type = all_of(catVars) ~ "categorical",
+    statistic = list(
+      all_continuous() ~ "{median} ({p25}, {p75})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    digits = list(all_continuous() ~ 0, all_categorical() ~ c(0, 1)),
+    missing = "ifany",
+    missing_text = "Missing",
+    missing_stat = "{N_miss} ({p_miss}%)"
+  )
+
+tbl_biop <- df_biop %>%
+  select(all_of(vars)) %>%
+  tbl_summary(
+    type = all_of(catVars) ~ "categorical",
+    statistic = list(
+      all_continuous() ~ "{median} ({p25}, {p75})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    digits = list(all_continuous() ~ 0, all_categorical() ~ c(0, 1)),
+    missing = "ifany",
+    missing_text = "Missing",
+    missing_stat = "{N_miss} ({p_miss}%)"
+  )
+
+tbl_none <- df_none %>%
+  select(all_of(vars)) %>%
+  tbl_summary(
+    type = all_of(catVars) ~ "categorical",
+    statistic = list(
+      all_continuous() ~ "{median} ({p25}, {p75})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    digits = list(all_continuous() ~ 0, all_categorical() ~ c(0, 1)),
+    missing = "ifany",
+    missing_text = "Missing",
+    missing_stat = "{N_miss} ({p_miss}%)"
+  )
+
+tbl_all <- df_all %>%
+  select(all_of(vars)) %>%
+  tbl_summary(
+    type = all_of(catVars) ~ "categorical",
+    statistic = list(
+      all_continuous() ~ "{median} ({p25}, {p75})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    digits = list(all_continuous() ~ 0, all_categorical() ~ c(0, 1)),
+    missing = "ifany",
+    missing_text = "Missing",
+    missing_stat = "{N_miss} ({p_miss}%)"
+  )
+
+# Merge tables
+table1_merged <- tbl_merge(
+  tbls = list(tbl_recall, tbl_biop, tbl_none, tbl_all),
+  tab_spanner = c(
+    paste0("**False positive recall only**<br>(N=", nrow(df_recall), ", ", 
+           round(nrow(df_recall)/nrow(df_all)*100, 2), "%)"),
+    paste0("**False positive biopsy**<br>(N=", nrow(df_biop), ", ", 
+           round(nrow(df_biop)/nrow(df_all)*100, 2), "%)"),
+    paste0("**Non-events**<br>(N=", nrow(df_none), ", ", 
+           round(nrow(df_none)/nrow(df_all)*100, 2), "%)"),
+    "**Overall**"
+  )
+) %>%
+  modify_header(label ~ "**Risk Factors**") %>%
+  modify_spanning_header(everything() ~ "**Table 1: Distribution of risk factors stratified by false positive outcome**")
+```
+
+```{r}
+table1_merged %>% 
+  as_gt() %>%
+  tab_options(
+    table.font.size = 10,
+    data_row.padding = px(1),
+    summary_row.padding = px(1),
+    grand_summary_row.padding = px(1),
+    footnotes.padding = px(1),
+    source_notes.padding = px(1),
+    row_group.padding = px(1)
+  )
+```

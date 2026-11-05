@@ -1,0 +1,12 @@
+# BCSC data and results: never commit
+*.RData
+*.rda
+*.rds
+*.csv
+data/
+results/
+
+# R session files
+.Rhistory
+.Rproj.user/
+.DS_Store
